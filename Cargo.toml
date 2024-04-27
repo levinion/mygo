@@ -2,6 +2,12 @@
 name = "mygo"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+authors = ["levinion <levinnion@gmail.com>"]
+description = "A fast HTTP server in Rust with Axum for better performance and UI 🚀"
+repository = "https://github.com/levinion/mygo"
+documentation = "https://docs.rs/mygo"
+keywords = ["net", "http", "server"]
 
 [dependencies]
 anyhow = "1.0.82"
