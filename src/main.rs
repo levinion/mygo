@@ -27,8 +27,6 @@ struct Opt {
     )]
     port: u16,
     #[arg(
-        short,
-        long,
         default_value = ".",
         help = "Specifies the target directory to serve files from."
     )]
