@@ -8,6 +8,7 @@ use axum::{
 };
 use clap::Parser;
 use tokio::net::TcpListener;
+use tokio::signal;
 use tower_http::services::ServeDir;
 
 #[derive(Parser)]
@@ -40,8 +41,10 @@ async fn main() -> anyhow::Result<()> {
     let listener = TcpListener::bind(&socket_addr).await?;
     let serve_dir = ServeDir::new(opt.target).not_found_service(fallback.into_service());
     let router = Router::new().fallback_service(serve_dir);
-    println!("Serving HTTP on 🌟 http://{}/ ...", &socket_addr);
-    axum::serve(listener, router).await?;
+    println!("Serving HTTP on http://{}/ ...", &socket_addr);
+    axum::serve(listener, router)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
     Ok(())
 }
 
@@ -82,7 +85,7 @@ async fn fallback(uri: Uri) -> impl IntoResponse {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Miko-{}</title>
+        <title>{}</title>
         <link
   rel="stylesheet"
   href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
@@ -97,4 +100,29 @@ async fn fallback(uri: Uri) -> impl IntoResponse {
         res
     );
     Html(temp)
+}
+
+// https://github.com/tokio-rs/axum/blob/main/examples/graceful-shutdown/src/main.rs
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
